@@ -1,11 +1,17 @@
 // Load the express module to create a web application
-
+// require("./routes/index");
 const express = require("express");
 const cookieParser = require("cookie-parser");
 
+const authRouter = require("./routes/oauth")
+const requestRouter = require("./routes/requests")
+
+
 const app = express();
 const cors = require("cors");
-const router = require("./router");
+// const router = require("./router");
+// var indexRouter = require("./routes/index");
+// var authRouter = require("./routes/auth");
 
 app.use(
   cors({
@@ -16,6 +22,9 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
-app.use("/api", router);
+// app.use("/api", router);
+app.use("/oauth", authRouter);
+app.use("/request", requestRouter);
+
 
 module.exports = app;

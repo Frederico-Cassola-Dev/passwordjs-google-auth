@@ -1,13 +1,17 @@
-const express = require("express");
+// const express = require("express");
+// var passport = require('passport');
 
-const router = express.Router();
-
-
-
+// const router = express.Router();
 
 
-//* OPEN ROUTES
-// router.post("/login", userControllers.readByEmail, verifyPassword);
 
 
-module.exports = router;
+
+// //* OPEN ROUTES
+// // router.post("/login", userControllers.readByEmail, verifyPassword);
+
+
+
+// router.get('/login/federated/google', passport.authenticate('google'));
+
+// module.exports = router;
