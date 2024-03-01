@@ -1,28 +1,41 @@
-import "./App.css";
+// App.js
+import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Home, Landing, Login, Signup } from "./screens";
 
-function navigate(url) {
-  window.location.href = url;
-}
+const App = () => {
+  const [user, setUser] = useState({});
 
-async function auth() {
-  const response = await fetch(`http://127.0.0.1:5000/request`, {
-    method: "post",
-  });
-  const data = await response.json();
-  
-  navigate(data.url);
-  console.log("🚀 - data:", data);
-}
+  useEffect(() => {
+    const theUser = localStorage.getItem("user");
 
-function App() {
+    if (theUser && !theUser.includes("undefined")) {
+      setUser(JSON.parse(theUser));
+    }
+  }, []);
+
   return (
-    <>
-      <h1>Sign in</h1>
-      <button type="button" onClick={() => auth()}>
-        Click me to sign in
-      </button>
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/"
+          element={user?.email ? <Navigate to="/home" /> : <Landing />}
+        />
+        <Route
+          path="/signup"
+          element={user?.email ? <Navigate to="/home" /> : <Signup />}
+        />
+        <Route
+          path="/login"
+          element={user?.email ? <Navigate to="/home" /> : <Login />}
+        />
+        <Route
+          path="/home"
+          element={user?.email ? <Home user={user} /> : <Navigate to="/" />}
+        />
+      </Routes>
+    </BrowserRouter>
   );
-}
+};
 
 export default App;

@@ -1,62 +1,113 @@
-// Load environment variables from .env file
-require("dotenv").config();
+const express = require("express");
+const app = express();
+require("dotenv/config");
+const cors = require("cors");
+const { OAuth2Client } = require("google-auth-library");
+const jwt = require("jsonwebtoken");
 
-// Import the Express application from src/app.js
-const app = require("./src/app");
-
-// Get the port from the environment variables
-const port = process.env.APP_PORT;
-
-// var passport = require('passport');
-// 
-// var GoogleStrategy = require('passport-google-oidc');
-
-// passport.use(new GoogleStrategy({
-//   clientID: process.env['GOOGLE_CLIENT_ID'],
-//   clientSecret: process.env['GOOGLE_CLIENT_SECRET'],
-//   callbackURL: '/oauth2/redirect/google',
-//   scope: [ 'profile' ]
-// }, function verify(issuer, profile, cb) {
-//   db.get('SELECT * FROM federated_credentials WHERE provider = ? AND subject = ?', [
-//     issuer,
-//     profile.id
-//   ], function(err, row) {
-//     if (err) { return cb(err); }
-//     if (!row) {
-//       db.run('INSERT INTO users (name) VALUES (?)', [
-//         profile.displayName
-//       ], function(err) {
-//         if (err) { return cb(err); }
-
-//         var id = this.lastID;
-//         db.run('INSERT INTO federated_credentials (user_id, provider, subject) VALUES (?, ?, ?)', [
-//           id,
-//           issuer,
-//           profile.id
-//         ], function(err) {
-//           if (err) { return cb(err); }
-//           var user = {
-//             id: id,
-//             name: profile.displayName
-//           };
-//           return cb(null, user);
-//         });
-//       });
-//     } else {
-//       db.get('SELECT * FROM users WHERE id = ?', [ row.user_id ], function(err, row) {
-//         if (err) { return cb(err); }
-//         if (!row) { return cb(null, false); }
-//         return cb(null, row);
-//       });
-//     }
-//   });
-// }));
-
-// Start the server and listen on the specified port
-app
-  .listen(port, () => {
-    console.info(`Server is listening on port ${port}`);
+app.use(
+  cors({
+    origin: ["http://localhost:3000"],
+    methods: "GET,POST,PUT,DELETE,OPTIONS",
   })
-  .on("error", (err) => {
-    console.error("Error:", err.message);
-  });
+);
+app.use(express.json());
+
+// Our database
+let DB = [];
+
+/**
+ *  This function is used verify a google account
+ */
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+async function verifyGoogleToken(token) {
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    return { payload: ticket.getPayload() };
+  } catch (error) {
+    return { error: "Invalid user detected. Please try again" };
+  }
+}
+
+app.post("/signup", async (req, res) => {
+  try {
+    console.log({ verified: verifyGoogleToken(req.body.credential) });
+    if (req.body.credential) {
+      const verificationResponse = await verifyGoogleToken(req.body.credential);
+
+      if (verificationResponse.error) {
+        return res.status(400).json({
+          message: verificationResponse.error,
+        });
+      }
+
+      const profile = verificationResponse?.payload;
+
+      DB.push(profile);
+
+      res.status(201).json({
+        message: "Signup was successful",
+        user: {
+          firstName: profile?.given_name,
+          lastName: profile?.family_name,
+          picture: profile?.picture,
+          email: profile?.email,
+          token: jwt.sign({ email: profile?.email }, "secret", {
+            expiresIn: "1d",
+          }),
+        },
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      message: "An error occured. Registration failed.",
+    });
+  }
+});
+
+app.post("/login", async (req, res) => {
+  try {
+    if (req.body.credential) {
+      const verificationResponse = await verifyGoogleToken(req.body.credential);
+      if (verificationResponse.error) {
+        return res.status(400).json({
+          message: verificationResponse.error,
+        });
+      }
+
+      const profile = verificationResponse?.payload;
+
+      const existsInDB = DB.find((person) => person?.email === profile?.email);
+
+      if (!existsInDB) {
+        return res.status(400).json({
+          message: "You are not registered. Please sign up",
+        });
+      }
+
+      res.status(201).json({
+        message: "Login was successful",
+        user: {
+          firstName: profile?.given_name,
+          lastName: profile?.family_name,
+          picture: profile?.picture,
+          email: profile?.email,
+          token: jwt.sign({ email: profile?.email }, process.env.TOKEN_SECRET, {
+            expiresIn: "1d",
+          }),
+        },
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      message: error?.message || error,
+    });
+  }
+});
+
+app.listen("5000", () => console.log("Server running on port 5000"));
