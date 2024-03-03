@@ -1,62 +1,80 @@
-// Load environment variables from .env file
-require("dotenv").config();
+const { OAuth2Client } = require("google-auth-library");
+const express = require("express");
+const mysql2 = require("mysql2");
+const cors = require("cors");
+require("dotenv/config");
 
-// Import the Express application from src/app.js
-const app = require("./src/app");
+const app = express();
+const PORT = process.env.PORT || 5000;
 
-// Get the port from the environment variables
-const port = process.env.APP_PORT;
+// MySQL Connection
+const connection = mysql2.createConnection({
+  host: "localhost",
+  user: "cfcassola",
+  password: "password",
+  database: "philosophical_vision",
+});
 
-// var passport = require('passport');
-// 
-// var GoogleStrategy = require('passport-google-oidc');
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID; // Replace with your actual Google OAuth client ID
 
-// passport.use(new GoogleStrategy({
-//   clientID: process.env['GOOGLE_CLIENT_ID'],
-//   clientSecret: process.env['GOOGLE_CLIENT_SECRET'],
-//   callbackURL: '/oauth2/redirect/google',
-//   scope: [ 'profile' ]
-// }, function verify(issuer, profile, cb) {
-//   db.get('SELECT * FROM federated_credentials WHERE provider = ? AND subject = ?', [
-//     issuer,
-//     profile.id
-//   ], function(err, row) {
-//     if (err) { return cb(err); }
-//     if (!row) {
-//       db.run('INSERT INTO users (name) VALUES (?)', [
-//         profile.displayName
-//       ], function(err) {
-//         if (err) { return cb(err); }
+const client = new OAuth2Client(CLIENT_ID);
 
-//         var id = this.lastID;
-//         db.run('INSERT INTO federated_credentials (user_id, provider, subject) VALUES (?, ?, ?)', [
-//           id,
-//           issuer,
-//           profile.id
-//         ], function(err) {
-//           if (err) { return cb(err); }
-//           var user = {
-//             id: id,
-//             name: profile.displayName
-//           };
-//           return cb(null, user);
-//         });
-//       });
-//     } else {
-//       db.get('SELECT * FROM users WHERE id = ?', [ row.user_id ], function(err, row) {
-//         if (err) { return cb(err); }
-//         if (!row) { return cb(null, false); }
-//         return cb(null, row);
-//       });
-//     }
-//   });
-// }));
-
-// Start the server and listen on the specified port
-app
-  .listen(port, () => {
-    console.info(`Server is listening on port ${port}`);
+app.use(express.json());
+app.use(
+  cors({
+    origin: ["http://localhost:3000"],
+    methods: "GET,POST,PUT,DELETE,OPTIONS",
   })
-  .on("error", (err) => {
-    console.error("Error:", err.message);
-  });
+);
+
+// Verify Google token
+async function verifyToken(token) {
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: CLIENT_ID,
+    });
+    console.log("🚀 - ticket:", ticket);
+
+    const payload = ticket.getPayload();
+    console.log("🚀 - payload:", payload);
+
+    return payload;
+  } catch (error) {
+    console.error("Error verifying Google token:", error);
+    return null;
+  }
+}
+
+// Google authentication route
+app.get("/auth/google", async (req, res) => {
+  const { token } = req.query;
+  console.log("🚀 - token:", token)
+
+  const payload = await verifyToken(token);
+  console.log("🚀 - payload:", payload);
+
+  if (payload) {
+    // Check if user exists in your database, if not, create new user entry
+    const user = {
+      googleId: payload.sub,
+      displayName: payload.name,
+      email: payload.email,
+    };
+    console.log("🚀 - user:", user);
+
+    connection.query("INSERT INTO users SET ?", user, (err, results) => {
+      if (err) {
+        console.error("Error inserting user:", err);
+        return res.status(500).json({ error: "Internal server error" });
+      }
+      res.json({ message: "User inserted successfully", user });
+    });
+  } else {
+    res.status(401).json({ error: "Invalid Google token" });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
