@@ -23,7 +23,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID, //passing CLIENT ID
       clientSecret: process.env.GOOGLE_CLIENT_SECRET, //Passing CLIENT SECRET, You can get this form https://console.cloud.google.com/, to know more go on line 113 of this file.
-      callbackURL: "/auth/google/callback", //This means after signin on what route google should redirect
+      callbackURL: "/auth/google/callback", //This means after sign-in on what route google should redirect
     },
     (accessToken, refreshToken, profile, cb) => {
       //After successful sign-in, we have access of these thing which are in parameters
@@ -126,12 +126,12 @@ router.get(
   })
 );
 
-// after signin the google will redirect to this route as we have added this route in callbace URL on line no 26
+// after sign-in the google will redirect to this route as we have added this route in callback URL on line no 26
 router.get("/google/callback", passport.authenticate("google"), (req, res) => {
   //If user exist than ...
   if (req.user) {
-    console.log("the user is", req.user[0]); //Just for debugging
-    //Creating a unique token using sign method which is provided by JWT, remember the 2nd parameter should be a secret key and that should have atleast length of 20, i have just passed 'rahulnikam' but you should not do the same and this should be kept in environment variable so that no one can see it
+    // console.log("the user is", req.user[0]); //Just for debugging
+    //Creating a unique token using sign method which is provided by JWT, remember the 2nd parameter should be a secret key and that should have at least length of 20, i have just passed 'rahulnikam' but you should not do the same and this should be kept in environment variable so that no one can see it
     const googleAuthToken = jwt.sign(
       { googleAuthToken: req.user[0].googleId },
       process.env.JWT_SECRET,

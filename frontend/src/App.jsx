@@ -10,6 +10,8 @@ function App() {
   let [userName, setUserName] = useState("");
   let [userEmail, setUserEmail] = useState("");
   let [userImg, setUserImg] = useState("");
+  console.log("🚀 - userImg:", userImg)
+
 
   //Requesting on http://localhost:5000/auth/login/success and getting users data.
   useEffect(() => {

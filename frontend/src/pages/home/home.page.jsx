@@ -1,7 +1,8 @@
 import Axios from "axios";
 import { useNavigate } from "react-router-dom";
+import PropTypes from "prop-types";
 
-export const HomePage = (props) => {
+export const HomePage = ({ isLogin, userName, userEmail, userImage }) => {
   const navigate = useNavigate();
   const logout = () => {
     Axios.get("http://localhost:5000/auth/logout", {
@@ -12,11 +13,11 @@ export const HomePage = (props) => {
   };
   return (
     <div>
-      {props.isLogin ? (
+      {isLogin ? (
         <div>
-          <h1>{props.userName}</h1>
-          <p>{props.userEmail}</p>
-          <img src={props.userImage} alt="" srcSet="" />
+          <h1>{userName}</h1>
+          <p>{userEmail}</p>
+          {userImage && <img src={userImage} alt="User Image" />}
           <button onClick={logout}>Logout</button>
         </div>
       ) : (
@@ -25,3 +26,11 @@ export const HomePage = (props) => {
     </div>
   );
 };
+
+
+HomePage.propTypes = {
+  isLogin: PropTypes.bool.isRequired,
+  userName: PropTypes.string.isRequired,
+  userEmail: PropTypes.string.isRequired,
+  userImage: PropTypes.string.isRequired,
+}
