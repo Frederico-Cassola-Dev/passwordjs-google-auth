@@ -1,27 +1,52 @@
+import { useEffect, useState } from "react";
 import "./App.css";
-
-function navigate(url) {
-  window.location.href = url;
-}
-
-async function auth() {
-  const response = await fetch(`http://127.0.0.1:5000/request`, {
-    method: "post",
-  });
-  const data = await response.json();
-  
-  navigate(data.url);
-  console.log("🚀 - data:", data);
-}
+import { AuthPage } from "./pages/Auth/AuthPage";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { HomePage } from "./pages/home/home.page";
+import Axios from "axios";
 
 function App() {
+  // const [user, setUser] = useState(null);
+  let [userName, setUserName] = useState("");
+  let [userEmail, setUserEmail] = useState("");
+  let [userImg, setUserImg] = useState("");
+
+  //Requesting on http://localhost:5000/auth/login/success and getting users data.
+  useEffect(() => {
+    Axios.get("http://localhost:5000/auth/login/success", {
+      withCredentials: true,
+    })
+      .then((res) => {
+        if (res.status == 200) {
+          setUserName(res.data.user[0]);
+          setUserEmail(res.data.user[1]);
+          setUserImg(res.data.user[2]);
+        } else {
+          console.log("No status");
+        }
+      })
+      .catch((err) => console.log(err));
+  }, []);
+
   return (
-    <>
-      <h1>Sign in</h1>
-      <button type="button" onClick={() => auth()}>
-        Click me to sign in
-      </button>
-    </>
+    <div className="App">
+      <Router>
+        <Routes>
+          <Route path="/signup" element={<AuthPage />} />
+          <Route
+            path="/"
+            element={
+              <HomePage
+                isLogin={userName.length > 0 ? true : false}
+                userName={userName}
+                userEmail={userEmail}
+                userImage={userImg}
+              />
+            }
+          />
+        </Routes>
+      </Router>
+    </div>
   );
 }
 
